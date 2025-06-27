@@ -1,0 +1,72 @@
+name: Archive Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Target Version'
+        required: true
+        type: string
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout current repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      
+      - name: Setup Git
+        run: |
+          git config --global user.name "ng-zorro-bot"
+          git config --global user.email "ng-zorro-bot@users.noreply.github.com"
+      
+      - name: Clone ng-zorro.github.io repository
+        run: |
+          git clone https://github.com/NG-ZORRO/ng-zorro.github.io.git --depth=1 temp-repo
+          cd temp-repo
+          echo "Cloned repository contents:"
+          ls -la
+      
+      - name: Remove issue-helper and version folders and hidden files
+        run: |
+          cd temp-repo
+          echo "Removing issue-helper and version folders..."
+          rm -rf issue-helper
+          rm -rf version
+          echo "Removing all hidden files (starting with .)..."
+          rm -rf .*
+          echo "Remaining contents after removal:"
+          ls -la
+      
+      - name: Create version directory
+        run: |
+          mkdir -p version/${{ github.event.inputs.version }}
+          echo "Created directory: version/${{ github.event.inputs.version }}"
+      
+      - name: Move files to version directory
+        run: |
+          cd temp-repo
+          find . -maxdepth 1 -type f -exec mv {} ../version/${{ github.event.inputs.version }}/ \;
+          find . -maxdepth 1 -type d ! -name '.' ! -name '..' ! -name '.git' -exec mv {} ../version/${{ github.event.inputs.version }}/ \;
+          cd ..
+          echo "Files moved to version/${{ github.event.inputs.version }}:"
+          ls -la version/${{ github.event.inputs.version }}/
+      
+      - name: Clean up temporary repository
+        run: |
+          rm -rf temp-repo
+      
+      - name: Commit and push changes
+        run: |
+          git add version/${{ github.event.inputs.version }}/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: archive version ${{ github.event.inputs.version }}"
+            git push origin ${{ github.ref_name }}
+            echo "Successfully archived version ${{ github.event.inputs.version }}"
+          fi
