@@ -1,0 +1,58 @@
+name: Sync GitHub Pages
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout current repository
+        uses: actions/checkout@v4
+        with:
+          path: archive-docs
+          fetch-depth: 0
+      
+      - name: Checkout GitHub Pages repository
+        uses: actions/checkout@v4
+        with:
+          repository: NG-ZORRO/ng-zorro.github.io
+          token: ${{ secrets.ACCESS_TOKEN }}
+          path: ng-zorro.github.io
+          fetch-depth: 0
+      
+      - name: Setup Git
+        run: |
+          git config --global user.name "ng-zorro-bot"
+          git config --global user.email "ng-zorro-bot@users.noreply.github.com"
+      
+      - name: Replace issue-helper directory
+        run: |
+          echo "Removing old issue-helper directory from GitHub Pages..."
+          rm -rf ng-zorro.github.io/issue-helper
+          echo "Copying issue-helper directory from archive-docs..."
+          cp -r archive-docs/issue-helper ng-zorro.github.io/issue-helper
+          echo "issue-helper directory synced successfully"
+      
+      - name: Replace version directory
+        run: |
+          echo "Removing old version directory from GitHub Pages..."
+          rm -rf ng-zorro.github.io/version
+          echo "Copying version directory from archive-docs..."
+          cp -r archive-docs/version ng-zorro.github.io/version
+          echo "version directory synced successfully"
+      
+      - name: Commit and push changes to GitHub Pages
+        run: |
+          cd ng-zorro.github.io
+          git add issue-helper/ version/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: sync issue-helper and version from archive-docs"
+            git push origin master
+            echo "Successfully synced to GitHub Pages"
+          fi
