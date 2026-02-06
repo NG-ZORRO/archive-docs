@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: NG-ZORRO/ng-zorro.github.io
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.ACCESS_TOKEN }}
           path: ng-zorro.github.io
           fetch-depth: 0
       
