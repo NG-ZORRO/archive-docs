@@ -1,0 +1,71 @@
+name: Sync Issue Helper
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout current repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      
+      - name: Setup Git
+        run: |
+          git config --global user.name "ng-zorro-bot"
+          git config --global user.email "ng-zorro-bot@users.noreply.github.com"
+      
+      - name: Checkout issue-helper repository
+        run: |
+          git clone https://github.com/NG-ZORRO/issue-helper.git temp-issue-helper
+          cd temp-issue-helper
+          echo "Cloned issue-helper repository contents:"
+          ls -la
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: |
+          cd temp-issue-helper
+          npm install
+      
+      - name: Build project
+        run: |
+          cd temp-issue-helper
+          npm run build
+          echo "Build artifacts in dist/:"
+          ls -la dist/
+      
+      - name: Remove old issue-helper directory
+        run: |
+          rm -rf issue-helper
+          echo "Removed old issue-helper directory"
+      
+      - name: Move build artifacts to issue-helper directory
+        run: |
+          mkdir -p issue-helper
+          mv temp-issue-helper/dist/* issue-helper/
+          echo "Moved build artifacts to issue-helper:"
+          ls -la issue-helper/
+      
+      - name: Clean up temporary repository
+        run: |
+          rm -rf temp-issue-helper
+      
+      - name: Commit and push changes
+        run: |
+          git add issue-helper/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: sync issue-helper build artifacts"
+            git push origin ${{ github.ref_name }}
+            echo "Successfully synced issue-helper"
+          fi
